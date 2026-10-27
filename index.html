@@ -38,6 +38,7 @@ button.danger{background:#713c49;color:white;padding:7px}
 .weekday{text-align:center;font-size:12px;color:#9fb4ca}
 .item{border-top:1px solid #3c526a;padding:12px 0}
 .item:first-child{border:0}
+.event-comment{white-space:pre-wrap;color:#e4d5c6;margin:7px 0 0;font-size:14px}
 .message{padding:12px;background:#3b4a60;border-radius:9px;margin:12px 0;white-space:pre-wrap}
 .error{background:#713c49}
 label{display:block}
@@ -185,8 +186,10 @@ function memberName(id){
  return members.find(m=>m.user_id===id)?.display_name||"Ikke fordelt";
 }
 function ownerOptions(id,blank=true){
+ const previous=$(id).value;
  $(id).innerHTML=(blank?'<option value="">Ingen ansvarlig</option>':"")+
  members.map(m=>'<option value="'+safe(m.user_id)+'">'+safe(m.display_name)+'</option>').join("");
+ if([...$(id).options].some(o=>o.value===previous))$(id).value=previous;
 }
 async function enter(u){
  user=u;
@@ -222,25 +225,28 @@ function events(d){
  let a=[],f=$("filter").value;
  if(f==="all"||f==="cabins")
  for(const x of records.cabin_bookings||[]){
-  if(x.start_date<=d&&d<x.end_date)
-   a.push({table:"cabin_bookings",id:x.id,icon:"🔵",title:(x.cabin_id==="tunnsbu"?"Tunnsbu":"Hamburgø")+" · "+memberName(x.booked_by),detail:x.start_date+" til "+x.end_date+" (avreise)"});
+  // Both arrival and departure are displayed as occupied in the calendar.
+  if(x.start_date<=d&&d<=x.end_date){
+   const tunnsbu=x.cabin_id==="tunnsbu";
+   a.push({table:"cabin_bookings",id:x.id,icon:tunnsbu?"🔵":"🟢",
+    title:(tunnsbu?"Tunnsbu":"Hamburgø")+" · "+memberName(x.booked_by),
+    detail:x.start_date+" til "+x.end_date+(d===x.end_date?" · Hjemreise":""),
+    comment:x.comment});
+  }
  }
  if(f==="all"||f==="visits")
  for(const x of records.visits||[]){
   if(x.visit_date===d)
-  a.push({
-  table:"cabin_bookings",
-  id:x.id,
-  icon:x.cabin_id==="tunnsbu"?"🔵":"🟢",
-  title:(x.cabin_id==="tunnsbu"?"Tunnsbu":"Hamburgø")
-    +" · "+memberName(x.booked_by),
-  detail:x.start_date+" til "+x.end_date+" (avreise)"
-});
+   a.push({table:"visits",id:x.id,icon:"🟠",
+    title:(x.visit_time?x.visit_time.slice(0,5)+" · ":"")+x.title,
+    detail:memberName(x.assigned_to),comment:x.comment});
  }
  if(f==="all"||f==="tasks")
  for(const x of records.tasks||[]){
   if(x.due_date===d)
-   a.push({table:"tasks",id:x.id,icon:"🟣",title:(x.done?"✓ ":"")+x.title,detail:memberName(x.assigned_to)});
+   a.push({table:"tasks",id:x.id,icon:"🟣",
+    title:(x.done?"✓ ":"")+x.title,
+    detail:memberName(x.assigned_to),comment:null});
  }
  return a;
 }
@@ -261,7 +267,7 @@ function renderCalendar(){
  
  const list=events(selected);
  $("dayEvents").innerHTML=list.length?list.map(e=>
-  '<div class="item"><div class="row"><strong class="grow">'+e.icon+" "+safe(e.title)+'</strong><button class="danger" data-delete="'+e.table+'" data-id="'+e.id+'">Slett</button></div><small>'+safe(e.detail)+"</small></div>"
+  '<div class="item"><div class="row"><strong class="grow">'+e.icon+" "+safe(e.title)+'</strong><button class="danger" data-delete="'+e.table+'" data-id="'+e.id+'">Slett</button></div><small>'+safe(e.detail)+'</small>'+(e.comment?'<p class="event-comment">'+safe(e.comment)+'</p>':'')+'</div>' 
  ).join(""):'<p class="muted">Ingen aktiviteter denne dagen.</p>';
 }
 function render(){
@@ -362,8 +368,9 @@ $("noteForm").onsubmit=e=>{
 document.addEventListener("click",async e=>{
  const b=e.target.closest("[data-delete]");
  if(!b||!confirm("Vil du slette denne oppføringen?"))return;
- const {error}=await db.from(b.dataset.delete).delete().eq("id",b.dataset.id);
- if(error)message("appMessage",error.message,true);
+ const {data,error}=await db.from(b.dataset.delete).delete().eq("id",b.dataset.id).select("id");
+ if(error)message("appMessage","Kunne ikke slette: "+error.message,true);
+ else if(!data||data.length===0)message("appMessage","Ingen oppføring ble slettet. Kontroller tilgangsreglene (DELETE) i Supabase.",true);
  else await refresh();
 });
 document.addEventListener("change",async e=>{
@@ -376,7 +383,9 @@ document.addEventListener("change",async e=>{
 document.addEventListener("visibilitychange",()=>{
  if(!document.hidden&&user)refresh();
 });
-setInterval(()=>{if(!document.hidden&&user)refresh()},30000);
+setInterval(()=>{
+ if(!document.hidden&&user&&!document.querySelector('input:focus,textarea:focus,select:focus'))refresh();
+},30000);
 db.auth.getUser().then(({data})=>{
  if(data.user)enter(data.user);
 });
