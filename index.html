@@ -33,6 +33,15 @@ button.danger{background:#713c49;color:white;padding:7px}
 .calendar{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
 .calendar button{padding:8px 2px;min-height:56px;background:#263b53;color:white;border:1px solid #3c536b;font-size:12px}
 .calendar button.selected{outline:2px solid #e6ad77}
+.calendar button.today{box-shadow:inset 0 0 0 2px #e6ad77}
+.calendar button.today.selected{outline:2px solid #fff0d8}
+.category-tag{display:inline-flex;align-items:center;gap:5px;margin-top:6px;padding:4px 9px;border-radius:999px;font-size:12px;font-weight:650;background:#30455e}
+.category-far{color:#ffbc83;background:#493c3b}
+.category-tunnsbu{color:#93c5fd;background:#283e5b}
+.category-hamburgo{color:#86efac;background:#254a43}
+.category-felles{color:#e5c4ff;background:#403550}
+.task-done{opacity:.55}
+.task-done strong{text-decoration:line-through}
 .calendar button.has{background:#34525b}
 .calendar small{display:block;font-size:10px}
 .weekday{text-align:center;font-size:12px;color:#9fb4ca}
@@ -49,7 +58,7 @@ label{display:block}
 <header>
 <div class="eyebrow">FAMILIENS FELLES PLANLEGGER</div>
 <h1>Søsken-app ♡</h1>
-<div class="muted">Én kalender · Tre søsken · To hytter</div>
+<div class="muted">Én kalender · Tre søsken · Én far · To hytter</div>
 </header>
 <main>
 <section id="login" class="card">
@@ -246,9 +255,17 @@ function events(d){
   if(x.due_date===d)
    a.push({table:"tasks",id:x.id,icon:"🟣",
     title:(x.done?"✓ ":"")+x.title,
-    detail:memberName(x.assigned_to),comment:null});
+    detail:memberName(x.assigned_to)+" · "+categoryLabel(x.category),comment:null});
  }
  return a;
+}
+function categoryLabel(v){
+ const labels={far:"👤 Far",tunnsbu:"⛰️ Tunnsbu",hamburgo:"🌊 Hamburgø",felles:"🤝 Felles"};
+ return labels[v]||"🤝 Felles";
+}
+function categoryTag(v){
+ const category=["far","tunnsbu","hamburgo","felles"].includes(v)?v:"felles";
+ return '<span class="category-tag category-'+category+'">'+categoryLabel(category)+'</span>';
 }
 function renderCalendar(){
  const y=month.getFullYear(),m=month.getMonth();
@@ -260,7 +277,7 @@ function renderCalendar(){
  for(let n=1;n<=days;n++){
   const d=dateStr(new Date(y,m,n)),ev=events(d);
   const icons=[...new Set(ev.map(e=>e.icon))].join("");
-  html+='<button class="'+(selected===d?"selected ":"")+(ev.length?"has":"")+'" data-day="'+d+'">'+n+"<small>"+icons+"</small></button>";
+  html+='<button class="'+(selected===d?"selected ":"")+(d===dateStr(new Date())?"today ":"")+(ev.length?"has":"")+'" data-day="'+d+'">'+n+"<small>"+icons+"</small></button>";
  }
  $("calendarGrid").innerHTML=html;
  $("dayTitle").textContent=new Intl.DateTimeFormat("nb-NO",{weekday:"long",day:"numeric",month:"long"}).format(new Date(selected+"T12:00:00"));
@@ -272,8 +289,8 @@ function renderCalendar(){
 }
 function render(){
  renderCalendar();
- $("taskList").innerHTML=(records.tasks||[]).map(x=>
-  '<div class="item row"><input style="width:auto" type="checkbox" data-check="tasks" data-id="'+x.id+'" '+(x.done?"checked":"")+'><div class="grow"><strong>'+safe(x.title)+'</strong><br><small>'+safe(memberName(x.assigned_to))+(x.due_date?" · "+safe(x.due_date):"")+'</small></div><button class="danger" data-delete="tasks" data-id="'+x.id+'">Slett</button></div>'
+ $("taskList").innerHTML=[...(records.tasks||[])].sort((a,b)=>Number(!!a.done)-Number(!!b.done)||(a.due_date||"9999-12-31").localeCompare(b.due_date||"9999-12-31")).map(x=>
+  '<div class="item row '+(x.done?'task-done':'')+'"><input aria-label="Marker oppgave ferdig" style="width:auto" type="checkbox" data-check="tasks" data-id="'+safe(x.id)+'" '+(x.done?"checked":"")+'><div class="grow"><strong>'+safe(x.title)+'</strong><br><small>'+safe(memberName(x.assigned_to))+(x.due_date?" · "+safe(x.due_date):"")+'</small><div>'+categoryTag(x.category)+'</div></div><button class="danger" data-delete="tasks" data-id="'+safe(x.id)+'">Slett</button></div>'
  ).join("")||'<p class="muted">Ingen oppgaver ennå.</p>';
  $("shoppingList").innerHTML=(records.shopping||[]).map(x=>
   '<div class="item row"><input style="width:auto" type="checkbox" data-check="shopping" data-id="'+x.id+'" '+(x.done?"checked":"")+'><span class="grow">'+safe(x.title)+'</span><button class="danger" data-delete="shopping" data-id="'+x.id+'">Slett</button></div>'
