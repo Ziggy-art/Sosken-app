@@ -228,12 +228,19 @@ function events(d){
  if(f==="all"||f==="visits")
  for(const x of records.visits||[]){
   if(x.visit_date===d)
-   a.push({table:"visits",id:x.id,icon:"🟠",title:(x.visit_time?x.visit_time.slice(0,5)+" · ":"")+x.title,detail:x.owner_name||memberName(x.assigned_to)});
+  a.push({
+  table:"cabin_bookings",
+  id:x.id,
+  icon:x.cabin_id==="tunnsbu"?"🔵":"🟢",
+  title:(x.cabin_id==="tunnsbu"?"Tunnsbu":"Hamburgø")
+    +" · "+memberName(x.booked_by),
+  detail:x.start_date+" til "+x.end_date+" (avreise)"
+});
  }
  if(f==="all"||f==="tasks")
  for(const x of records.tasks||[]){
   if(x.due_date===d)
-   a.push({table:"tasks",id:x.id,icon:"🟢",title:(x.done?"✓ ":"")+x.title,detail:memberName(x.assigned_to)});
+   a.push({table:"tasks",id:x.id,icon:"🟣",title:(x.done?"✓ ":"")+x.title,detail:memberName(x.assigned_to)});
  }
  return a;
 }
@@ -251,8 +258,7 @@ function renderCalendar(){
  }
  $("calendarGrid").innerHTML=html;
  $("dayTitle").textContent=new Intl.DateTimeFormat("nb-NO",{weekday:"long",day:"numeric",month:"long"}).format(new Date(selected+"T12:00:00"));
- $("visitDate").value=selected;
- $("arrival").value=selected;
+ 
  const list=events(selected);
  $("dayEvents").innerHTML=list.length?list.map(e=>
   '<div class="item"><div class="row"><strong class="grow">'+e.icon+" "+safe(e.title)+'</strong><button class="danger" data-delete="'+e.table+'" data-id="'+e.id+'">Slett</button></div><small>'+safe(e.detail)+"</small></div>"
