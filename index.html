@@ -2,80 +2,378 @@
 <!DOCTYPE html>
 <html lang="no">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#101b2c">
-  <title>Søsken-app</title>
-  <style>
-    * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      background: #101b2c;
-      color: #f4f6fa;
-      font-family: Arial, sans-serif;
-    }
-    header {
-      padding: 32px 20px;
-      background: #17263a;
-    }
-    main {
-      max-width: 650px;
-      margin: auto;
-      padding: 20px;
-    }
-    h1 { margin: 8px 0; }
-    .sub { color: #b5c5d8; }
-    .card {
-      background: #203249;
-      padding: 22px;
-      border-radius: 16px;
-      margin-bottom: 14px;
-    }
-    .icon { font-size: 28px; }
-    .tag {
-      color: #e7b17c;
-      font-size: 12px;
-      letter-spacing: 2px;
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#101b2c">
+<title>Søsken-app</title>
+<style>
+:root{font-family:system-ui,Arial,sans-serif;color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:#101b2c;color:#eef4fc}
+header{padding:25px 18px;background:#17283c}
+main{max-width:800px;margin:auto;padding:16px}
+h1{margin:5px 0;font-size:29px}
+h2{font-size:19px}
+p,.muted{color:#b7c8dc}
+small{color:#aabed4}
+.eyebrow{color:#e8b27c;letter-spacing:2px;font-size:12px}
+.card{background:#1c2e44;border:1px solid #344b65;border-radius:16px;padding:17px;margin:13px 0}
+input,select,textarea,button{font:inherit;padding:11px;border-radius:9px;border:1px solid #455a73;background:#283d55;color:white;max-width:100%}
+input,select,textarea{width:100%;margin:5px 0 10px}
+textarea{min-height:65px}
+button{cursor:pointer;background:#e6ad77;color:#152238;border:0;font-weight:650}
+button.secondary{background:#344b65;color:white}
+button.danger{background:#713c49;color:white;padding:7px}
+.row{display:flex;gap:9px;align-items:center;flex-wrap:wrap}
+.grow{flex:1}
+.hidden{display:none!important}
+.tabs{display:flex;gap:5px;overflow-x:auto;margin:17px 0}
+.tabs button{background:#30455e;color:white;white-space:nowrap;font-size:13px}
+.tabs button.active{background:#e6ad77;color:#152238}
+.calendar{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
+.calendar button{padding:8px 2px;min-height:56px;background:#263b53;color:white;border:1px solid #3c536b;font-size:12px}
+.calendar button.selected{outline:2px solid #e6ad77}
+.calendar button.has{background:#34525b}
+.calendar small{display:block;font-size:10px}
+.weekday{text-align:center;font-size:12px;color:#9fb4ca}
+.item{border-top:1px solid #3c526a;padding:12px 0}
+.item:first-child{border:0}
+.message{padding:12px;background:#3b4a60;border-radius:9px;margin:12px 0;white-space:pre-wrap}
+.error{background:#713c49}
+label{display:block}
+@media(min-width:600px){.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}}
+</style>
 </head>
 <body>
-  <header>
-    <div class="tag">FAMILIENS FELLES PLANLEGGER</div>
-    <h1>Søsken-app</h1>
-    <div class="sub">Én kalender. Tre søsken. Full oversikt.</div>
-  </header>
+<header>
+<div class="eyebrow">FAMILIENS FELLES PLANLEGGER</div>
+<h1>Søsken-app ♡</h1>
+<div class="muted">Én kalender · Tre søsken · To hytter</div>
+</header>
+<main>
+<section id="login" class="card">
+<h2>Logg inn</h2>
+<p>Bruk e-postadressen og passordet ditt fra Supabase.</p>
+<form id="loginForm">
+<label>E-post<input id="email" type="email" required></label>
+<label>Passord<input id="password" type="password" required></label>
+<button type="submit">Logg inn</button>
+</form>
+<div id="loginMessage" class="message hidden"></div>
+</section>
 
-  <main>
-    <div class="card">
-      <div class="icon">📅</div>
-      <h2>Felleskalender</h2>
-      <p>Hyttebestillinger, fars avtaler og gjøremål.</p>
-    </div>
+<section id="app" class="hidden">
+<div class="row">
+<small id="userName" class="grow"></small>
+<button class="secondary" id="logout">Logg ut</button>
+</div>
+<div id="appMessage" class="message hidden"></div>
+<nav class="tabs" id="tabs">
+<button data-tab="calendar" class="active">Kalender</button>
+<button data-tab="tasks">Gjøremål</button>
+<button data-tab="shopping">Handleliste</button>
+<button data-tab="notes">Beskjeder</button>
+</nav>
 
-    <div class="card">
-      <div class="icon">🏔️</div>
-      <h2>Tunnsbu</h2>
-      <p>Felles reservasjoner av fjellhytta.</p>
-    </div>
+<section id="calendar" class="card">
+<div class="row">
+<h2 class="grow">Felleskalender</h2>
+<button class="secondary" id="previous">‹</button>
+<strong id="monthName"></strong>
+<button class="secondary" id="following">›</button>
+</div>
+<label>Vis aktiviteter
+<select id="filter">
+<option value="all">Alle aktiviteter</option>
+<option value="cabins">Hytter</option>
+<option value="visits">Fars avtaler</option>
+<option value="tasks">Gjøremål</option>
+</select>
+</label>
+<div id="calendarGrid" class="calendar"></div>
+<h2 id="dayTitle"></h2>
+<div id="dayEvents"></div>
+<hr>
+<h2>Ny avtale for far</h2>
+<form id="visitForm">
+<div class="two">
+<label>Dato<input id="visitDate" type="date" required></label>
+<label>Klokkeslett<input id="visitTime" type="time"></label>
+</div>
+<label>Avtale<input id="visitTitle" required maxlength="120" placeholder="Frisør, lege, tannlege ..."></label>
+<label>Ansvarlig<select id="visitOwner"></select></label>
+<label>Kommentar<textarea id="visitComment" maxlength="1000" placeholder="Unngå sensitive helseopplysninger"></textarea></label>
+<button>Legg til avtale</button>
+</form>
+<hr>
+<h2>Reserver hytte</h2>
+<form id="bookingForm">
+<label>Hytte<select id="cabin">
+<option value="tunnsbu">Tunnsbu – fjellet</option>
+<option value="hamburgo">Hamburgø – sjøen</option>
+</select></label>
+<div class="two">
+<label>Ankomst<input id="arrival" type="date" required></label>
+<label>Avreise<input id="departure" type="date" required></label>
+</div>
+<label>Kommentar<textarea id="bookingComment" maxlength="1000"></textarea></label>
+<button>Reserver hytte</button>
+</form>
+</section>
 
-    <div class="card">
-      <div class="icon">🌊</div>
-      <h2>Hamburgø</h2>
-      <p>Felles reservasjoner av sjøhytta.</p>
-    </div>
+<section id="tasks" class="card hidden">
+<h2>Felles gjøremål</h2>
+<div id="taskList"></div>
+<form id="taskForm">
+<label>Oppgave<input id="taskTitle" maxlength="180" required placeholder="Hva skal gjøres?"></label>
+<label>Ansvarlig<select id="taskOwner"></select></label>
+<div class="two">
+<label>Gjelder<select id="taskCategory">
+<option value="far">Far</option>
+<option value="tunnsbu">Tunnsbu</option>
+<option value="hamburgo">Hamburgø</option>
+<option value="felles">Felles</option>
+</select></label>
+<label>Frist<input id="taskDue" type="date"></label>
+</div>
+<button>Legg til oppgave</button>
+</form>
+</section>
 
-    <div class="card">
-      <div class="icon">❤️</div>
-      <h2>Fars avtaler</h2>
-      <p>Lege, frisør, tannlege og andre avtaler.</p>
-    </div>
+<section id="shopping" class="card hidden">
+<h2>Felles handleliste</h2>
+<div id="shoppingList"></div>
+<form id="shoppingForm">
+<input id="shoppingTitle" maxlength="180" required placeholder="Hva trenger vi?">
+<button>Legg til</button>
+</form>
+</section>
 
-    <div class="card">
-      <div class="icon">✓</div>
-      <h2>Gjøremål</h2>
-      <p>Fordel oppgaver mellom søsknene.</p>
-    </div>
-  </main>
+<section id="notes" class="card hidden">
+<h2>Beskjeder</h2>
+<div id="noteList"></div>
+<form id="noteForm">
+<textarea id="noteBody" maxlength="2000" required placeholder="Skriv en beskjed"></textarea>
+<button>Publiser</button>
+</form>
+</section>
+<p><small>Privat familiedatabase · Søsken-app</small></p>
+</section>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script>
+const URL="https://xmadgyhptzdbpspujvuo.supabase.co";
+const KEY="sb_publishable_bKADDjI3b-0qzeQx8UF6Pw_XsmZdemA";
+const db=window.supabase.createClient(URL,KEY);
+const $=id=>document.getElementById(id);
+let user=null,month=new Date(),selected=dateStr(new Date());
+let records={},members=[];
+const tables=["family_members","visits","tasks","shopping","notes","cabin_bookings"];
+function dateStr(d){
+ return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+}
+function safe(v){
+ return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+function message(id,text,error=false){
+ $(id).textContent=text;
+ $(id).className="message"+(error?" error":"");
+}
+function clearMessage(id){$(id).classList.add("hidden")}
+function memberName(id){
+ return members.find(m=>m.user_id===id)?.display_name||"Ikke fordelt";
+}
+function ownerOptions(id,blank=true){
+ $(id).innerHTML=(blank?'<option value="">Ingen ansvarlig</option>':"")+
+ members.map(m=>'<option value="'+safe(m.user_id)+'">'+safe(m.display_name)+'</option>').join("");
+}
+async function enter(u){
+ user=u;
+ const {data,error}=await db.from("family_members").select("user_id").eq("user_id",u.id).maybeSingle();
+ if(error||!data){
+  await db.auth.signOut();
+  user=null;
+  message("loginMessage","Brukeren har ikke tilgang til familien ennå.",true);
+  return;
+ }
+ $("login").classList.add("hidden");
+ $("app").classList.remove("hidden");
+ $("userName").textContent=u.email;
+ await refresh();
+}
+async function refresh(){
+ if(!user)return;
+ const results=await Promise.all(tables.map(t=>db.from(t).select("*").limit(1000)));
+ for(let i=0;i<tables.length;i++){
+  if(results[i].error){
+   message("appMessage","Kunne ikke hente "+tables[i]+": "+results[i].error.message,true);
+   return;
+  }
+  records[tables[i]]=results[i].data||[];
+ }
+ members=records.family_members;
+ ownerOptions("taskOwner");
+ ownerOptions("visitOwner");
+ clearMessage("appMessage");
+ render();
+}
+function events(d){
+ let a=[],f=$("filter").value;
+ if(f==="all"||f==="cabins")
+ for(const x of records.cabin_bookings||[]){
+  if(x.start_date<=d&&d<x.end_date)
+   a.push({table:"cabin_bookings",id:x.id,icon:"🔵",title:(x.cabin_id==="tunnsbu"?"Tunnsbu":"Hamburgø")+" · "+memberName(x.booked_by),detail:x.start_date+" til "+x.end_date+" (avreise)"});
+ }
+ if(f==="all"||f==="visits")
+ for(const x of records.visits||[]){
+  if(x.visit_date===d)
+   a.push({table:"visits",id:x.id,icon:"🟠",title:(x.visit_time?x.visit_time.slice(0,5)+" · ":"")+x.title,detail:x.owner_name||memberName(x.assigned_to)});
+ }
+ if(f==="all"||f==="tasks")
+ for(const x of records.tasks||[]){
+  if(x.due_date===d)
+   a.push({table:"tasks",id:x.id,icon:"🟢",title:(x.done?"✓ ":"")+x.title,detail:memberName(x.assigned_to)});
+ }
+ return a;
+}
+function renderCalendar(){
+ const y=month.getFullYear(),m=month.getMonth();
+ $("monthName").textContent=new Intl.DateTimeFormat("nb-NO",{month:"long",year:"numeric"}).format(month);
+ const offset=(new Date(y,m,1).getDay()+6)%7;
+ const days=new Date(y,m+1,0).getDate();
+ let html=["M","T","O","T","F","L","S"].map(d=>'<div class="weekday">'+d+"</div>").join("");
+ html+="<div></div>".repeat(offset);
+ for(let n=1;n<=days;n++){
+  const d=dateStr(new Date(y,m,n)),ev=events(d);
+  const icons=[...new Set(ev.map(e=>e.icon))].join("");
+  html+='<button class="'+(selected===d?"selected ":"")+(ev.length?"has":"")+'" data-day="'+d+'">'+n+"<small>"+icons+"</small></button>";
+ }
+ $("calendarGrid").innerHTML=html;
+ $("dayTitle").textContent=new Intl.DateTimeFormat("nb-NO",{weekday:"long",day:"numeric",month:"long"}).format(new Date(selected+"T12:00:00"));
+ $("visitDate").value=selected;
+ $("arrival").value=selected;
+ const list=events(selected);
+ $("dayEvents").innerHTML=list.length?list.map(e=>
+  '<div class="item"><div class="row"><strong class="grow">'+e.icon+" "+safe(e.title)+'</strong><button class="danger" data-delete="'+e.table+'" data-id="'+e.id+'">Slett</button></div><small>'+safe(e.detail)+"</small></div>"
+ ).join(""):'<p class="muted">Ingen aktiviteter denne dagen.</p>';
+}
+function render(){
+ renderCalendar();
+ $("taskList").innerHTML=(records.tasks||[]).map(x=>
+  '<div class="item row"><input style="width:auto" type="checkbox" data-check="tasks" data-id="'+x.id+'" '+(x.done?"checked":"")+'><div class="grow"><strong>'+safe(x.title)+'</strong><br><small>'+safe(memberName(x.assigned_to))+(x.due_date?" · "+safe(x.due_date):"")+'</small></div><button class="danger" data-delete="tasks" data-id="'+x.id+'">Slett</button></div>'
+ ).join("")||'<p class="muted">Ingen oppgaver ennå.</p>';
+ $("shoppingList").innerHTML=(records.shopping||[]).map(x=>
+  '<div class="item row"><input style="width:auto" type="checkbox" data-check="shopping" data-id="'+x.id+'" '+(x.done?"checked":"")+'><span class="grow">'+safe(x.title)+'</span><button class="danger" data-delete="shopping" data-id="'+x.id+'">Slett</button></div>'
+ ).join("")||'<p class="muted">Handlelisten er tom.</p>';
+ $("noteList").innerHTML=(records.notes||[]).map(x=>
+  '<div class="item"><small>'+safe(x.author_email||"Familien")+'</small><p style="white-space:pre-wrap">'+safe(x.body)+'</p><button class="danger" data-delete="notes" data-id="'+x.id+'">Slett</button></div>'
+ ).join("")||'<p class="muted">Ingen beskjeder ennå.</p>';
+}
+async function add(table,obj,form){
+ const {error}=await db.from(table).insert(obj);
+ if(error){message("appMessage","Kunne ikke lagre: "+error.message,true);return}
+ form.reset();
+ await refresh();
+}
+$("loginForm").onsubmit=async e=>{
+ e.preventDefault();
+ clearMessage("loginMessage");
+ const {data,error}=await db.auth.signInWithPassword({email:$("email").value.trim(),password:$("password").value});
+ if(error)message("loginMessage",error.message,true);
+ else await enter(data.user);
+};
+$("logout").onclick=async()=>{
+ await db.auth.signOut();user=null;
+ $("app").classList.add("hidden");
+ $("login").classList.remove("hidden");
+ $("password").value="";
+};
+$("tabs").onclick=e=>{
+ const b=e.target.closest("[data-tab]");
+ if(!b)return;
+ for(const t of ["calendar","tasks","shopping","notes"])
+  $(t).classList.toggle("hidden",t!==b.dataset.tab);
+ document.querySelectorAll("[data-tab]").forEach(x=>x.classList.toggle("active",x===b));
+ refresh();
+};
+$("previous").onclick=()=>{month=new Date(month.getFullYear(),month.getMonth()-1,1);renderCalendar()};
+$("following").onclick=()=>{month=new Date(month.getFullYear(),month.getMonth()+1,1);renderCalendar()};
+$("calendarGrid").onclick=e=>{
+ const b=e.target.closest("[data-day]");
+ if(b){selected=b.dataset.day;renderCalendar()}
+};
+$("filter").onchange=renderCalendar;
+$("visitForm").onsubmit=e=>{
+ e.preventDefault();
+ add("visits",{
+  visit_date:$("visitDate").value,
+  visit_time:$("visitTime").value||null,
+  title:$("visitTitle").value.trim(),
+  assigned_to:$("visitOwner").value||null,
+  comment:$("visitComment").value,
+  created_by:user.id
+ },e.target);
+};
+$("bookingForm").onsubmit=e=>{
+ e.preventDefault();
+ if($("departure").value<=$("arrival").value){
+  message("appMessage","Avreise må være etter ankomst.",true);return;
+ }
+ add("cabin_bookings",{
+  cabin_id:$("cabin").value,
+  start_date:$("arrival").value,
+  end_date:$("departure").value,
+  comment:$("bookingComment").value,
+  booked_by:user.id
+ },e.target);
+};
+$("taskForm").onsubmit=e=>{
+ e.preventDefault();
+ add("tasks",{
+  title:$("taskTitle").value.trim(),
+  assigned_to:$("taskOwner").value||null,
+  category:$("taskCategory").value,
+  due_date:$("taskDue").value||null,
+  created_by:user.id
+ },e.target);
+};
+$("shoppingForm").onsubmit=e=>{
+ e.preventDefault();
+ add("shopping",{
+  title:$("shoppingTitle").value.trim(),
+  created_by:user.id
+ },e.target);
+};
+$("noteForm").onsubmit=e=>{
+ e.preventDefault();
+ add("notes",{
+  body:$("noteBody").value.trim(),
+  author_email:user.email,
+  created_by:user.id
+ },e.target);
+};
+document.addEventListener("click",async e=>{
+ const b=e.target.closest("[data-delete]");
+ if(!b||!confirm("Vil du slette denne oppføringen?"))return;
+ const {error}=await db.from(b.dataset.delete).delete().eq("id",b.dataset.id);
+ if(error)message("appMessage",error.message,true);
+ else await refresh();
+});
+document.addEventListener("change",async e=>{
+ const b=e.target.closest("[data-check]");
+ if(!b)return;
+ const {error}=await db.from(b.dataset.check).update({done:b.checked}).eq("id",b.dataset.id);
+ if(error)message("appMessage",error.message,true);
+ await refresh();
+});
+document.addEventListener("visibilitychange",()=>{
+ if(!document.hidden&&user)refresh();
+});
+setInterval(()=>{if(!document.hidden&&user)refresh()},30000);
+db.auth.getUser().then(({data})=>{
+ if(data.user)enter(data.user);
+});
+</script>
 </body>
 </html>
