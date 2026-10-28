@@ -83,6 +83,7 @@ label{display:block}
 <button data-tab="tasks">Gjøremål</button>
 <button data-tab="shopping">Handleliste</button>
 <button data-tab="notes">Beskjeder</button>
+<button data-tab="booking">Book hytte</button>
 </nav>
 
 <section id="calendar" class="card">
@@ -115,7 +116,11 @@ label{display:block}
 <label>Kommentar<textarea id="visitComment" maxlength="1000" placeholder="Unngå sensitive helseopplysninger"></textarea></label>
 <button>Legg til avtale</button>
 </form>
-<hr>
+</section>
+
+<section id="booking" class="card hidden">
+<h2>Book hytte</h2>
+<p class="muted">Velg hytte og datoer. Reservasjonen vises i felleskalenderen.</p>
 <h2>Reserver hytte</h2>
 <form id="bookingForm">
 <label>Hytte<select id="cabin">
@@ -194,6 +199,16 @@ function clearMessage(id){$(id).classList.add("hidden")}
 function memberName(id){
  return members.find(m=>m.user_id===id)?.display_name||"Ikke fordelt";
 }
+function noteAuthor(x){
+ const member=members.find(m=>m.user_id===x.created_by);
+ return member?.display_name||"Familiemedlem";
+}
+function noteDate(x){
+ const raw=x.created_at||x.inserted_at||x.published_at;
+ if(!raw)return "";
+ const d=new Date(raw);
+ return Number.isNaN(d.getTime())?"":new Intl.DateTimeFormat("nb-NO",{day:"numeric",month:"long",year:"numeric"}).format(d);
+}
 function ownerOptions(id,blank=true){
  const previous=$(id).value;
  $(id).innerHTML=(blank?'<option value="">Ingen ansvarlig</option>':"")+
@@ -225,6 +240,7 @@ async function refresh(){
   records[tables[i]]=results[i].data||[];
  }
  members=records.family_members;
+ $("userName").textContent=memberName(user.id);
  ownerOptions("taskOwner");
  ownerOptions("visitOwner");
  clearMessage("appMessage");
@@ -295,8 +311,8 @@ function render(){
  $("shoppingList").innerHTML=(records.shopping||[]).map(x=>
   '<div class="item row"><input style="width:auto" type="checkbox" data-check="shopping" data-id="'+x.id+'" '+(x.done?"checked":"")+'><span class="grow">'+safe(x.title)+'</span><button class="danger" data-delete="shopping" data-id="'+x.id+'">Slett</button></div>'
  ).join("")||'<p class="muted">Handlelisten er tom.</p>';
- $("noteList").innerHTML=(records.notes||[]).map(x=>
-  '<div class="item"><small>'+safe(x.author_email||"Familien")+'</small><p style="white-space:pre-wrap">'+safe(x.body)+'</p><button class="danger" data-delete="notes" data-id="'+x.id+'">Slett</button></div>'
+ $("noteList").innerHTML=[...(records.notes||[])].sort((a,b)=>String(b.created_at||b.inserted_at||"").localeCompare(String(a.created_at||a.inserted_at||""))).map(x=>
+  '<div class="item"><small><strong>'+safe(noteAuthor(x))+'</strong>'+(noteDate(x)?' · '+safe(noteDate(x)):'')+'</small><p style="white-space:pre-wrap">'+safe(x.body)+'</p><button class="danger" data-delete="notes" data-id="'+safe(x.id)+'">Slett</button></div>'
  ).join("")||'<p class="muted">Ingen beskjeder ennå.</p>';
 }
 async function add(table,obj,form){
