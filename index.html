@@ -26,7 +26,12 @@ small{color:#aabed4}
 .section-divider{border:0;border-top:1px solid #425b75;margin:24px 0 0}
 .card{background:#1c2e44;border:1px solid #344b65;border-radius:16px;padding:17px;margin:13px 0}
 input,select,textarea,button{font:inherit;padding:11px;border-radius:9px;border:1px solid #455a73;background:#283d55;color:white;max-width:100%}
-input,select,textarea{width:100%;margin:5px 0 10px}
+input,select,textarea{width:100%;min-width:0;margin:5px 0 10px}
+label,.two,.two>*{min-width:0;max-width:100%}
+input[type="date"],input[type="time"]{display:block;width:100%;min-width:0;max-width:100%;-webkit-appearance:none;appearance:none}
+.form-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px}
+.form-actions button{flex:0 1 auto}
+#passwordPanel{border-color:#b98556}
 textarea{min-height:65px}
 button{cursor:pointer;background:#e6ad77;color:#152238;border:0;font-weight:650}
 button.secondary{background:#344b65;color:white}
@@ -79,6 +84,8 @@ label{display:block}
  .entry-panel{padding:13px;margin-top:20px}
  .entry-heading{font-size:17px;padding:10px}
  .row{gap:7px}
+ .two{display:grid;grid-template-columns:minmax(0,1fr);gap:0}
+ .two input{min-width:0;width:100%}
  .item .danger{font-size:12px;padding:7px 8px}
  input,select,textarea{font-size:16px}
 }
@@ -109,6 +116,7 @@ label{display:block}
 <label>Passord<input id="password" type="password" required></label>
 <button type="submit">Logg inn</button>
 </form>
+<button type="button" class="secondary" id="forgotPassword">Få lenke for å lage eller endre passord</button>
 <div id="loginMessage" class="message hidden"></div>
 </section>
 
@@ -118,6 +126,16 @@ label{display:block}
 <button class="secondary" id="logout">Logg ut</button>
 </div>
 <div id="appMessage" class="message hidden"></div>
+<details id="passwordPanel" class="card">
+<summary style="cursor:pointer;font-weight:650">Opprett eller endre passord</summary>
+<p class="muted">Velg ditt eget passord (minst 8 tegn). Dette påvirker bare din konto.</p>
+<form id="passwordForm">
+<label>Nytt passord<input id="newPassword" type="password" minlength="8" autocomplete="new-password" required></label>
+<label>Gjenta nytt passord<input id="confirmPassword" type="password" minlength="8" autocomplete="new-password" required></label>
+<div class="form-actions"><button type="submit">Lagre passord</button><button type="reset" class="secondary">Nullstill</button></div>
+</form>
+<div id="passwordMessage" class="message hidden" role="status"></div>
+</details>
 <nav class="tabs" id="tabs">
 <button data-tab="calendar" class="active"><span class="tab-icon" aria-hidden="true">▦</span><span>Kalender</span></button>
 <button data-tab="tasks"><span class="tab-icon" aria-hidden="true">✓</span><span>Gjøremål</span></button>
@@ -155,7 +173,7 @@ label{display:block}
 <label>Avtale<input id="visitTitle" required maxlength="120" placeholder="Frisør, lege, tannlege ..."></label>
 <label>Ansvarlig<select id="visitOwner"></select></label>
 <label>Kommentar<textarea id="visitComment" maxlength="1000" placeholder="Unngå sensitive helseopplysninger"></textarea></label>
-<button>Legg til avtale</button>
+<div class="form-actions"><button type="submit">Legg til avtale</button><button type="reset" class="secondary">Nullstill</button></div>
 </form>
 </div>
 </section>
@@ -174,7 +192,7 @@ label{display:block}
 <label>Avreise<input id="departure" type="date" required></label>
 </div>
 <label>Kommentar<textarea id="bookingComment" maxlength="1000"></textarea></label>
-<button>Reserver hytte</button>
+<div class="form-actions"><button type="submit">Reserver hytte</button><button type="reset" class="secondary">Nullstill</button></div>
 </form>
 </section>
 
@@ -195,7 +213,7 @@ label{display:block}
 </select></label>
 <label>Frist<input id="taskDue" type="date"></label>
 </div>
-<button>Legg til oppgave</button>
+<div class="form-actions"><button type="submit">Legg til oppgave</button><button type="reset" class="secondary">Nullstill</button></div>
 </form>
 </div>
 </section>
@@ -205,7 +223,7 @@ label{display:block}
 <div id="shoppingList"></div>
 <form id="shoppingForm">
 <input id="shoppingTitle" maxlength="180" required placeholder="Hva trenger vi?">
-<button>Legg til</button>
+<div class="form-actions"><button type="submit">Legg til</button><button type="reset" class="secondary">Nullstill</button></div>
 </form>
 </section>
 
@@ -214,7 +232,7 @@ label{display:block}
 <div id="noteList"></div>
 <form id="noteForm">
 <textarea id="noteBody" maxlength="2000" required placeholder="Skriv en beskjed"></textarea>
-<button>Publiser</button>
+<div class="form-actions"><button type="submit">Publiser</button><button type="reset" class="secondary">Nullstill</button></div>
 </form>
 </section>
 <p><small>Privat familiedatabase · Søsken-app</small></p>
@@ -366,6 +384,24 @@ async function add(table,obj,form){
  form.reset();
  await refresh();
 }
+// A valid invitation or recovery link may establish a Supabase session.
+// Password changes are only allowed for the authenticated user.
+$("passwordForm").onsubmit=async e=>{
+ e.preventDefault();
+ const pass=$("newPassword").value;
+ if(pass!==$("confirmPassword").value){message("passwordMessage","Passordene er ikke like.",true);return}
+ const {error}=await db.auth.updateUser({password:pass});
+ if(error){message("passwordMessage","Kunne ikke lagre passord: "+error.message,true);return}
+ $("passwordForm").reset();
+ message("passwordMessage","Passordet er lagret. Du kan bruke det neste gang du logger inn.");
+};
+$("forgotPassword").onclick=async()=>{
+ const email=$("email").value.trim();
+ if(!email){message("loginMessage","Skriv inn e-postadressen din først.",true);return}
+ const {error}=await db.auth.resetPasswordForEmail(email,{redirectTo:location.origin+location.pathname});
+ if(error)message("loginMessage","Kunne ikke sende e-post: "+error.message,true);
+ else message("loginMessage","Hvis e-postadressen er registrert, får du en lenke. Åpne den på denne enheten, og velg passord i appen.");
+};
 $("loginForm").onsubmit=async e=>{
  e.preventDefault();
  clearMessage("loginMessage");
@@ -464,6 +500,15 @@ document.addEventListener("visibilitychange",()=>{
 setInterval(()=>{
  if(!document.hidden&&user&&!document.querySelector('input:focus,textarea:focus,select:focus'))refresh();
 },30000);
+db.auth.onAuthStateChange((event,session)=>{
+ if(event==="PASSWORD_RECOVERY"&&session?.user){
+  enter(session.user).then(()=>{
+   $("passwordPanel").open=true;
+   $("passwordPanel").scrollIntoView({block:"center"});
+   message("passwordMessage","Velg et nytt passord nedenfor.");
+  });
+ }
+});
 db.auth.getUser().then(({data})=>{
  if(data.user)enter(data.user);
 });
