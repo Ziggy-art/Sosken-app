@@ -6,6 +6,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#101b2c">
 <title>Søsken-app</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Søsken-app">
 <style>
 :root{font-family:system-ui,Arial,sans-serif;color-scheme:dark}
 *{box-sizing:border-box}
@@ -55,7 +58,40 @@ button.danger{background:#713c49;color:white;padding:7px}
 .message{padding:12px;background:#3b4a60;border-radius:9px;margin:12px 0;white-space:pre-wrap}
 .error{background:#713c49}
 label{display:block}
-@media(min-width:600px){.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}}
+/* Navigation and calendar are mobile-first; desktop retains a horizontal tab row. */
+.tabs{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:5px;overflow:visible}
+.tabs button{min-width:0;white-space:normal;overflow-wrap:normal;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;line-height:1.2;padding:11px 3px;font-size:11px;min-height:62px}
+.tab-icon{font-size:19px;line-height:1.1;min-height:21px}
+.month-controls{display:grid;grid-template-columns:44px minmax(0,1fr) 44px;align-items:center;gap:8px;margin:12px 0 18px}
+.month-controls strong{text-align:center;text-transform:capitalize;font-size:16px;white-space:nowrap}
+.month-arrow{height:44px;width:44px;padding:0;font-size:26px;line-height:1}
+@media(max-width:599px){
+ header{padding:20px 15px}
+ main{padding:10px}
+ h1{font-size:26px}
+ .card{padding:13px;margin:11px 0}
+ .tabs{gap:4px;margin:12px 0}
+ .tabs button{font-size:10px;padding:9px 1px;min-height:62px;letter-spacing:-.15px}
+ .tab-icon{font-size:18px}
+ .calendar{gap:3px}
+ .calendar button{min-height:47px;padding:5px 1px;font-size:12px;min-width:0}
+ .calendar small{font-size:9px;line-height:1.2;overflow-wrap:anywhere}
+ .entry-panel{padding:13px;margin-top:20px}
+ .entry-heading{font-size:17px;padding:10px}
+ .row{gap:7px}
+ .item .danger{font-size:12px;padding:7px 8px}
+ input,select,textarea{font-size:16px}
+}
+@media(max-width:360px){
+ .tabs button{font-size:9px}
+ .calendar button{min-height:43px}
+ .month-controls strong{font-size:14px}
+}
+@media(min-width:600px){
+ .two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+ .tabs button{flex-direction:row;font-size:13px;min-height:44px;padding:11px 6px;gap:7px}
+ .tab-icon{font-size:16px;min-height:0}
+}
 </style>
 </head>
 <body>
@@ -83,19 +119,19 @@ label{display:block}
 </div>
 <div id="appMessage" class="message hidden"></div>
 <nav class="tabs" id="tabs">
-<button data-tab="calendar" class="active">Kalender</button>
-<button data-tab="tasks">Gjøremål</button>
-<button data-tab="shopping">Handleliste</button>
-<button data-tab="notes">Beskjeder</button>
-<button data-tab="booking">Book hytte</button>
+<button data-tab="calendar" class="active"><span class="tab-icon" aria-hidden="true">▦</span><span>Kalender</span></button>
+<button data-tab="tasks"><span class="tab-icon" aria-hidden="true">✓</span><span>Gjøremål</span></button>
+<button data-tab="shopping"><span class="tab-icon" aria-hidden="true">🛒</span><span>Handleliste</span></button>
+<button data-tab="notes"><span class="tab-icon" aria-hidden="true">✉</span><span>Beskjeder</span></button>
+<button data-tab="booking"><span class="tab-icon" aria-hidden="true">⌂</span><span>Book hytte</span></button>
 </nav>
 
 <section id="calendar" class="card">
-<div class="row">
-<h2 class="grow">Felleskalender</h2>
-<button class="secondary" id="previous">‹</button>
+<h2>Felleskalender</h2>
+<div class="month-controls">
+<button class="secondary month-arrow" id="previous" type="button" aria-label="Forrige måned">‹</button>
 <strong id="monthName"></strong>
-<button class="secondary" id="following">›</button>
+<button class="secondary month-arrow" id="following" type="button" aria-label="Neste måned">›</button>
 </div>
 <label>Vis aktiviteter
 <select id="filter">
